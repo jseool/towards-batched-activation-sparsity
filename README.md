@@ -27,17 +27,22 @@ kernel measurements, sensitivity experiments, and practical online baselines.
 > Kernel results were measured on an **NVIDIA A100X 80GB**. Reprofile the
 > kernel configurations before benchmarking on a different GPU.
 
-## Main results
+## Main characterization results
 
-| Batch size | Oracle mean block sparsity | Projection-kernel speedup |
+Each point averages independently evaluated per-step oracle maps over five
+batch groups and the first 11 decoding steps.
+
+| Batch size | Per-step oracle mean block sparsity | Kernel-level speedup upper bound |
 |---:|---:|---:|
 | 2 | 0.803 | 1.948x |
 | 16 | 0.638 | 1.602x |
 | 64 | 0.520 | 1.203x |
 
-The speedups above are oracle-based projection-kernel upper bounds, not
-end-to-end serving speedups. Chapter 5 of the thesis measures the overhead of
-online block selection separately.
+At each evaluated step, only that decoding position is sparsified; the oracle
+does not perform a sequential sparse rollout. The speedups therefore describe
+the kernel-level upper bound associated with the per-step oracle maps, not
+end-to-end serving speedup. Chapter 5 evaluates practical online selection and
+its runtime overhead separately.
 
 ![Achievable sparsity and kernel speedup](figures/figure_4_4_sparsity_speedup.png)
 
