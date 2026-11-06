@@ -24,10 +24,8 @@ kernel measurements, sensitivity experiments, and practical online baselines.
 | Kernel baseline | Dense GEMM through cuBLAS |
 
 > [!IMPORTANT]
-> Kernel configurations and speedups in this repository were measured on an
-> **NVIDIA A100X 80GB**. Kernel choices are hardware-specific. For any other
-> GPU, rerun the kernel configuration search and profiling before evaluating
-> performance; the A100X lookup choices and timing results should not be reused.
+> Kernel results were measured on an **NVIDIA A100X 80GB**. Reprofile the
+> kernel configurations before benchmarking on a different GPU.
 
 ## Main results
 
