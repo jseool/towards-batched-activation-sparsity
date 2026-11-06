@@ -1,23 +1,4 @@
-"""
-Minimal runtime-only Triton helper for observable shared-mask experiments.
-
-This file intentionally keeps only the paths used by
-`run_observable_shared_mask_suite.py` sparse forward patch:
-- `_indexed_sparse_gemm_from_active_idx`
-- `_indexed_sparse_gemm_from_active_blocks`
-- `_get_cached_active_blocks`
-- `INDEX_BLOCK_META_SIZE`
-
-Optional helpers for newer experiments are also included:
-- `_get_prepacked_weight_block_major`
-- `_prepacked_block_sparse_gemm_from_active_blocks`
-- `_prepacked_block_sparse_gemm_2d_from_active_blocks`
-
-New runtime-oriented updates:
-- bf16-first execution (`--dtype bf16` default)
-- compact/index-aware 2D output path (no mandatory zero-fill)
-- delta active-block metadata cache (add/remove update from mask diffs)
-"""
+"""Triton kernels for batch-shared block-sparse matrix multiplication."""
 
 from __future__ import annotations
 
@@ -41,10 +22,7 @@ RUNTIME_DEFAULT_DTYPE = os.environ.get("TEAL_EXP_RUNTIME_DTYPE", "bf16").strip()
 if RUNTIME_DEFAULT_DTYPE not in {"bf16", "fp16"}:
     RUNTIME_DEFAULT_DTYPE = "bf16"
 
-# Decode-optimized baseline preset (validated in orchestration probes):
-# - keep delta metadata updates
-# - disable compact output by default (graph-safe hot path)
-# - never scatter compact->dense unless explicitly requested
+# Decode defaults.
 USE_DELTA_ACTIVE_BLOCKS_DEFAULT = os.environ.get("TEAL_EXP_USE_DELTA_ACTIVE_BLOCKS", "1") not in ("0", "false", "False")
 USE_COMPACT_2D_OUTPUT_DEFAULT = os.environ.get("TEAL_EXP_USE_COMPACT_2D_OUTPUT", "0") not in ("0", "false", "False")
 SCATTER_COMPACT_TO_DENSE_DEFAULT = os.environ.get("TEAL_EXP_SCATTER_COMPACT_TO_DENSE", "0") not in ("0", "false", "False")
@@ -60,12 +38,7 @@ INDEXED_BLOCK_K_GEMV = int(os.environ.get("TEAL_EXP_INDEXED_BLOCK_K_GEMV", str(I
 INDEXED_NUM_WARPS = int(os.environ.get("TEAL_EXP_INDEXED_NUM_WARPS", "0"))
 INDEXED_NUM_STAGES = int(os.environ.get("TEAL_EXP_INDEXED_NUM_STAGES", "0"))
 
-# Runtime fast-path controls for dynamic decode use.
-# Default runtime path:
-# - prepacked 2D block-sparse kernel
-# - sorted active blocks ON
-# - compact output OFF (can be enabled via env for chain experiments)
-# - no dense scatter by default
+# Runtime fast-path controls.
 SORT_ACTIVE_BLOCKS_DEFAULT = os.environ.get("TEAL_EXP_SORT_ACTIVE_BLOCKS", "1") not in ("0", "false", "False")
 # Cheap CPU-bitmask sort: for N <= threshold, sort on CPU to avoid GPU kernel launch overhead.
 # TEAL_EXP_CHEAP_SORT_THRESHOLD=0 disables (always use torch.sort on GPU).
@@ -808,25 +781,7 @@ def prepacked_block_sparse_gemm_batched_kernel_explicit(
     tl.store(y_ptrs, acc, mask=(rb[:, None] < BATCHSIZE) & (rn[None, :] < N_OUT))
 
 
-# ---------------------------------------------------------------------------
-# Experimental kernel: bitmap-addressed static loop.
-#
-# BENCHMARK RESULT (A100, B=16, d_in=d_out=4096, block_k=64, CUDA graph):
-#   keep=0.13: this kernel=0.0346ms, original 1d=0.0168ms, dense=0.0257ms
-#   → This kernel is ~2x SLOWER than original 1d in CUDA graph mode.
-#
-# Why slower despite compile-time addresses:
-#   - Iterates N_TOTAL_K_BLOCKS=64 times always (vs 8 for original at keep=0.13)
-#   - tl.dot(zeros, zeros) for inactive blocks is cheap but NOT free — the loop
-#     body still issues TMA/tensor-core instructions even with all-zero inputs
-#   - PTX size ∝ N_TOTAL_K_BLOCKS → larger code footprint, worse instruction cache
-#
-# The serial-load bottleneck in the original kernel was not the actual bottleneck
-# in CUDA graph mode. Original 1d kernel at keep=0.13 runs in 16.8µs (faster
-# than dense 25.7µs) with CUDA graph — no further kernel optimization needed.
-#
-# Kept for reference and as a starting point for future experiments.
-# ---------------------------------------------------------------------------
+# Bitmap-addressed static-loop kernel.
 
 _PREPACK_BITMAP_PRELOAD_AUTOTUNE_CONFIGS = [
     # Standard shapes.
@@ -1499,20 +1454,7 @@ def _prepacked_block_sparse_gemm_from_active_blocks_splitk(
     )
 
 
-# ---------------------------------------------------------------------------
-# Sorted-scan kernel: static loop over ALL K-blocks with Python `if` branch.
-#
-# Key differences from bitmap_preload kernel:
-#   - `if is_active:` causes uniform warp branch → inactive blocks are truly
-#     skipped (no tl.dot, no memory loads) rather than predicated-zero.
-#   - All block addresses are compile-time-known (from tl.static_range) →
-#     hardware can pipeline bitmap byte reads for all 64 blocks simultaneously.
-#   - num_stages can now actually pipeline across loop iterations since
-#     addresses are known at compile time (unlike original serial-load kernel).
-#
-# Requirement: active_blocks must be in sorted order (ascending IDs).
-# That's already guaranteed by the `.sort()[0]` in all callers.
-# ---------------------------------------------------------------------------
+# Sorted scan over all K blocks; inactive blocks are skipped uniformly.
 
 _PREPACK_SORTED_SCAN_AUTOTUNE_CONFIGS = [
     triton.Config({"BLOCK_B": 16, "BLOCK_N": 64},  num_warps=2, num_stages=2),
@@ -1646,26 +1588,7 @@ def _prepacked_block_sparse_gemm_from_active_blocks_sorted_scan(
     )
 
 
-# ---------------------------------------------------------------------------
-# Preloaded-IDs kernel: eliminate serial scalar-load dependency chain.
-#
-# Original kernel bottleneck at high keep ratios:
-#   Each iteration does: block_id = tl.load(ACTIVE_BLOCKS + block_it)
-#   The NEXT iteration's memory address depends on this load completing.
-#   With N_ACTIVE=38 iterations: 38 × ~300ns serial load latency = ~11µs overhead.
-#
-# Fix: preload ALL active block IDs in ONE vectorized load at kernel start.
-#   - All N_ACTIVE block IDs arrive in registers simultaneously (~1 cache line).
-#   - Extract each block_id via register-only tl.sum(tl.where(scan==i, ids, 0)).
-#   - Register extraction: ~5-10ns vs 300ns for global load → 40-60x faster.
-#
-# Expected speedup at keep=0.60 for gate (38/64 active):
-#   Original: ~92µs (40µs memory + 52µs serial-load overhead)
-#   Preloaded: ~40µs (memory-bandwidth-bound, no serial overhead)
-#   → should beat dense (66.8µs) at keep=0.60
-#
-# N_MAX_ACTIVE_BLOCKS must be >= NUM_ACTIVE_BLOCKS; set to N_TOTAL_K_BLOCKS.
-# ---------------------------------------------------------------------------
+# Preload active block IDs to avoid a scalar dependency chain.
 
 _PREPACK_PRELOAD_IDS_AUTOTUNE_CONFIGS = [
     triton.Config({"BLOCK_B": 16, "BLOCK_N": 64},  num_warps=2, num_stages=2),
@@ -2441,27 +2364,7 @@ def prepacked_block_sparse_gemm_2d_batched_kernel(
     )
 
 
-# ---------------------------------------------------------------------------
-# 2D sequential-bitmap kernel (experimental).
-#
-# Motivation: the original 2D kernel has a serial dependent load chain —
-#   ACTIVE_K_BLOCKS[i] load → block_id value → weight address → weight load
-# This prevents Triton's software pipeline (num_stages) from overlapping
-# loads of tile i+1 with compute of tile i.
-#
-# This kernel iterates sequentially over ALL TOTAL_K_BLOCKS K-tiles.
-# Addresses are `block_id * stride` (loop counter only, no data dependency),
-# enabling Triton software pipelining with num_stages > 1.
-# Inactive tiles are masked via a precomputed uint8 bitmap — bitmap loads
-# are also sequential and predictable.
-#
-# Trade-off: TOTAL_K_BLOCKS iterations vs NUM_ACTIVE_K_BLOCKS.
-# Expected crossover (from 1D bitmap benchmarks, keep ≈ 0.26):
-#   keep < 0.26: serial kernel faster  (fewer iterations dominate)
-#   keep > 0.26: bitmap kernel faster  (pipeline efficiency dominates)
-#
-# Enable with: TEAL_EXP_USE_2D_BITMAP_KERNEL=1
-# ---------------------------------------------------------------------------
+# Sequential-bitmap kernel for pipeline-friendly K-block traversal.
 
 _PREPACK_2D_BITMAP_AUTOTUNE_CONFIGS = [
     triton.Config({"BLOCK_B": 16, "BLOCK_N": max(16, int(INDEX_BLOCK_OUT_META_SIZE))}, num_warps=2, num_stages=2),

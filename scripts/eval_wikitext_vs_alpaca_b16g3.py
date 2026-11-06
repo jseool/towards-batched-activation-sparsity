@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Dataset ablation: WikiText vs Alpaca at the SAME B16 / g3 length profile.
-
-Builds a 16-sample WikiText batch whose per-sample prompt lengths exactly match
-Alpaca g3 ([54,54,55,56,60,61,66,66,67,69,69,70,71,71,74,74], decode 0..10), then
-runs the identical per-step harness (dense / TEAL-0.5 / oracle round-robin / Polar
-head) so the only variable is the dataset. Compared against the stored Alpaca g3
-numbers (dense 1.1527, TEAL 1.2269, oracle 1.2155 @S=0.642, Polar 1.2017).
-
-Purpose: see whether oracle achievable sparsity & quality differ on WikiText vs
-Alpaca at matched length, and decide if WikiText is usable for the Polar
-compatibility study.
-"""
+"""Compare WikiText and Alpaca using a matched batch-16 length profile."""
 from __future__ import annotations
 
 import argparse

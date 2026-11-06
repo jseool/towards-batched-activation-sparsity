@@ -31,7 +31,7 @@ kernels/     Triton block-sparse GEMM implementation
 docs/        reproduction protocol and result-to-artifact map
 ```
 
-## Quick start: reproduce the paper plots
+## Reproducing the figures
 
 This path is CPU-only and uses the committed result snapshots.
 
@@ -42,21 +42,20 @@ pip install -r requirements-plot.txt
 python scripts/plot_paper_results.py
 ```
 
-Generated files are written to `reproduced_figures/`. The script also prints
-the headline values and checks them against the thesis claims.
+Generated files are written to `reproduced_figures/`. The script verifies the
+reported batch-16 and batch-64 values against the committed measurements.
 
 ## Full GPU reproduction
 
-The oracle and kernel experiments require an NVIDIA GPU, Llama 2 access,
-TEAL calibration histograms, and substantially more time than plot
-reproduction. See [docs/REPRODUCING.md](docs/REPRODUCING.md) for setup and
-commands. The original measurements used an NVIDIA A100X 80GB GPU.
+The oracle and kernel experiments require an NVIDIA GPU, Llama 2 access, and
+TEAL calibration histograms. See [docs/REPRODUCING.md](docs/REPRODUCING.md)
+for setup and commands. Measurements in the thesis used an NVIDIA A100X 80GB.
 
 ## Paper-to-artifact map
 
 | Thesis item | Committed result | Reproduction code |
 |---|---|---|
-| Figure 4.1, PPL vs. TEAL sparsity | `figures/figure_4_1_ppl_vs_sparsity.png` | `scripts/plot_paper_results.py` (snapshot retained because the original curve aggregates separate sweeps) |
+| Figure 4.1, PPL vs. TEAL sparsity | `figures/figure_4_1_ppl_vs_sparsity.png` | Snapshot assembled from separate TEAL sweeps |
 | Figure 4.2, oracle heatmap | `results/oracle/perstep_batch_sweep.json` | `scripts/plot_paper_results.py` |
 | Figure 4.3, oracle sparsity vs. batch | `results/oracle/perstep_batch_sweep.json` | `scripts/eval_perstep_batch_sweep.py`, `scripts/plot_paper_results.py` |
 | Figure 4.4, sparsity and speedup | oracle JSON + kernel JSON | `scripts/bench_perstep_actual_kernel_speedup.py`, `scripts/plot_paper_results.py` |
@@ -81,9 +80,8 @@ Please use [CITATION.cff](CITATION.cff), or:
 
 ## License and third-party components
 
-Original artifact code is released under the MIT License. The thesis PDF is
-not redistributed here; the official institutional-repository copy is linked
-above. The kernel and
-experiment code builds on TEAL; its MIT license is preserved in
+Artifact code is released under the MIT License. The thesis PDF is available
+from the institutional repository linked above. The kernel and experiment
+code builds on TEAL; its MIT license is preserved in
 `third_party/TEAL_LICENSE`. Model weights and datasets are not redistributed
 and remain subject to their own licenses and access terms.

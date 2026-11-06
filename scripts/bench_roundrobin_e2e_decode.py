@@ -6,7 +6,6 @@ import gc
 import json
 import os
 import math
-import os
 import sys
 import time
 from pathlib import Path
@@ -17,7 +16,9 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
+ROOT_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(ROOT_DIR))
 
 os.environ["TEAL_EXP_ENABLE_SPLIT_K_1D"] = "0"
 os.environ["TEAL_EXP_USE_RUN_COMPRESSED_METADATA"] = "0"
@@ -33,7 +34,7 @@ from kernels.shared_mask_batched_triton_min_runtime import (  # noqa: E402
     _prepacked_block_sparse_gemm_from_active_blocks_splitk,
 )
 
-MODEL_NAME = "meta-llama/Llama-2-7b-hf"
+MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Llama-2-7b-hf")
 CACHE_DIR = os.environ.get("HF_HOME") or os.environ.get("TRANSFORMERS_CACHE")
 PROJS = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
 PROJ_TO_SHAPE = {

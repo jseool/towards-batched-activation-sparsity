@@ -10,7 +10,7 @@ python scripts/plot_paper_results.py
 ```
 
 This reproduces Figures 4.2–4.4 from the committed measurements and validates
-the headline batch-16 and batch-64 values. Figure 4.1 is retained as a snapshot
+the batch-16 and batch-64 values. Figure 4.1 is retained as a snapshot
 because its curve was assembled from multiple TEAL calibration sweeps.
 
 ## 2. GPU prerequisites
@@ -32,12 +32,12 @@ export MODEL_NAME=meta-llama/Llama-2-7b-hf
 
 ## 3. Oracle batch sweep (Figure 4.3)
 
-The full thesis sweep is computationally expensive because every decoding step
-tries every layer/projection sparsity increment. Start with a smoke test:
+The full sweep tries every layer/projection sparsity increment at each selected
+decoding step. A minimal run is:
 
 ```bash
 python scripts/eval_perstep_batch_sweep.py \
-  --out_dir outputs/oracle-smoke \
+  --out_dir outputs/oracle-minimal \
   --batch_sizes 2 \
   --num_groups 1 \
   --steps 0 \
@@ -85,9 +85,6 @@ python scripts/bench_alpaca_energy_budget_e2e.py \
   --energy_keeps 0.99,0.97,0.95,0.90,0.85,0.80 \
   --profile
 ```
-
-Use `--help` if the local script version names a parameter differently; the
-committed result snapshot is the authoritative record of the thesis run.
 
 ## 6. Expected variability
 

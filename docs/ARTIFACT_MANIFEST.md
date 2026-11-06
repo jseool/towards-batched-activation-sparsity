@@ -8,7 +8,7 @@
   grouping/dataset ablations, and Triton kernel implementation.
 - A CPU-only plotting and consistency-check path.
 
-## Intentionally excluded
+## Excluded
 
 - Llama 2 weights and tokenizer: governed by Meta's license and downloaded by
   the user after access approval.
@@ -16,8 +16,8 @@
   than duplicated in this source-code repository.
 - TEAL activation histograms and model caches: large derived artifacts; paths
   are supplied through environment variables.
-- The original 36GB exploratory result tree, profiler captures, temporary
-  binaries, logs, caches, and abandoned experiments.
+- Profiler captures, intermediate binaries, logs, caches, and exploratory runs
+  not used in the thesis.
 - Complete copies of third-party repositories (TEAL, CATS, DejaVu, LaRoSA,
   Polar-Sparsity, and CHESS). Only code needed for this artifact is retained,
   with the relevant TEAL license notice.
@@ -34,9 +34,9 @@
 
 ## Provenance
 
-The committed JSON/CSV files are immutable snapshots from the thesis
-experiments. The plotting script reads these files without embedding headline
-numbers. SHA-256 hashes can be refreshed with:
+The committed JSON/CSV files are snapshots from the thesis experiments. The
+plotting script derives reported values directly from these files. SHA-256
+hashes can be generated with:
 
 ```bash
 sha256sum results/**/*.json results/**/*.csv

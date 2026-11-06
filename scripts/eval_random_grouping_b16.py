@@ -1,21 +1,9 @@
 #!/usr/bin/env python3
-"""Random vs length grouping ablation (Alpaca, B16).
-
-Length groups (g0..g4) bucket samples by length. This draws RANDOM B16 batches
-from the SAME 80-sample pool that formed those groups, so the only variable is
-grouping (length-homogeneous vs random/mixed-length). Measures oracle achievable
-mean sparsity at the TEAL-0.5 quality budget per step.
-
-Hypothesis: batch-shared sparsity is driven by batch size, not sample
-composition, so random (heterogeneous) batches should reach the same sparsity as
-length groups (B16 length-group mean ~0.638). Confirms length grouping is a
-padding-efficiency choice, not a sparsity lever.
-"""
+"""Compare random and length-sorted Alpaca groups at batch size 16."""
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import statistics
 import sys
 from pathlib import Path
@@ -32,7 +20,7 @@ from eval_perstep_budget_sweep import (  # noqa: E402
     _load_thresholds_for_budgets,
 )
 
-# 80-sample pool = union of the B16 length groups g0..g4 (prompt_len 43..166).
+# Dataset indices used by the five length-sorted B16 groups.
 POOL = [41764, 9396, 15077, 30465, 24657, 51562, 32373, 3034, 11313, 25111, 41068, 3142, 42479, 4834, 44849, 22327,
         5089, 44940, 40720, 13292, 21827, 50198, 1173, 6587, 38212, 37866, 26376, 11622, 44863, 48302, 43939, 32366,
         237, 10317, 34029, 20407, 43652, 17131, 46606, 13128, 3539, 50984, 3956, 49937, 11781, 19089, 9672, 10175,

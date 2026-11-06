@@ -108,7 +108,7 @@ def check_claims(batches: list[int], means: list[float], speedups: dict[int, flo
     ]
     for label, passed in checks:
         print(f"[{'PASS' if passed else 'FAIL'}] {label}")
-    print("\nHeadline values")
+    print("\nMeasured values")
     for batch in batches:
         print(f"B={batch:>2}: sparsity={sparsity[batch]:.3f}, kernel_speedup={speedups.get(batch, float('nan')):.3f}x")
     if not all(passed for _, passed in checks):

@@ -1,27 +1,9 @@
 #!/usr/bin/env python3
-"""Energy-budget online top-k: fully-adaptive block sparsity, no sparsity target.
+"""Benchmark online block selection under an activation-energy budget.
 
-Same setting as bench_alpaca_uniform_online_topk_e2e.py (Alpaca, B=16, group3,
-full-prompt prefill with padding/attention mask, 32-token decode, decode-phase
-timing, no CUDA graph, HF forward path).
-
-Instead of keeping a fixed *fraction* of K-blocks per linear (uniform density),
-each linear keeps, at every decode step, only as many top-energy blocks as are
-needed to retain a fixed fraction X of that step's activation energy:
-
-  1. block energy e[b] = ||x_block||^2   (mean over batch tokens)
-  2. sort descending, cumulative sum
-  3. keep the smallest k blocks whose cumulative energy >= X * total energy
-
-No per-layer target, no global sparsity target: per-cell and overall sparsity
-emerge from the data.  The only knob is the scalar energy budget X.
-
-Deployment uses the real block-sparse kernel (same path as the other practical
-benchmarks): the energy-budget selection picks the active K-blocks, the realised
-per-cell density picks the kernel config, and the sparse GEMM runs.  We report
-absolute PPL (dense and sparse), tps speedup over dense, and -- when --profile is
-set -- a wall-time breakdown of energy-selection vs sparse-GEMM so the slow part
-is visible.
+Each projection retains the smallest set of blocks whose cumulative squared L2
+norm reaches the requested fraction. Prefill remains dense; decoding uses the
+block-sparse kernel selected for the realized density.
 """
 from __future__ import annotations
 
@@ -32,7 +14,6 @@ import time
 from pathlib import Path
 
 import torch
-import torch.nn.functional as F  # noqa: F401  (kept for parity / debugging)
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -221,7 +202,6 @@ def main() -> None:
         if mode == "energy" and stop_energy:
             continue
         print(f"[2/3] {name}", flush=True)
-        # clean speed + quality (no profiling sync overhead)
         stats: dict = {"calls": 0, "wall_s": 0.0, "select_wall_s": 0.0, "kernel_wall_s": 0.0}
         originals = _patch_adaptive(model, sweep, block_k, mode, value, False, stats, args.min_sparse_sparsity)
         rec = _decode_measure_alpaca(model, prompt_ids, prompt_am, last_pos, resp, args.repeats, args.warmup)
