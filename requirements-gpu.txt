@@ -1,0 +1,9 @@
+-r requirements-plot.txt
+datasets>=2.18,<5
+transformers>=4.40,<5
+accelerate>=0.29
+sentencepiece>=0.2
+torch>=2.2
+triton>=2.2
+flash-attn>=2.5
+

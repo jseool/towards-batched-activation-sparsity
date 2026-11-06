@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this artifact, please cite the thesis."
+title: "Towards Batched Activation Sparsity in LLM Decoding"
+type: thesis
+authors:
+  - family-names: Lee
+    given-names: Junseo
+date-released: 2026-08-01
+url: "https://dcollection.snu.ac.kr/public_resource/pdf/000000199763_20261107004756.pdf"
+institution:
+  name: Seoul National University
+license: MIT
