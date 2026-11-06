@@ -12,7 +12,7 @@ a decoding batch shares one hardware-friendly block mask. The artifact contains
 the per-step oracle search, a 64-channel block-sparse GEMM implementation,
 kernel measurements, sensitivity experiments, and practical online baselines.
 
-## Experimental platform
+## Setup
 
 | Component | Setting |
 |---|---|
@@ -23,11 +23,7 @@ kernel measurements, sensitivity experiments, and practical online baselines.
 | Quality budget | Per-step NLL of batch-size-1 TEAL at 50% sparsity |
 | Kernel baseline | Dense GEMM through cuBLAS |
 
-> [!IMPORTANT]
-> Kernel results were measured on an **NVIDIA A100X 80GB**. Reprofile the
-> kernel configurations before benchmarking on a different GPU.
-
-## Main characterization results
+## Main Results
 
 Each point averages independently evaluated per-step oracle maps over five
 batch groups and the first 11 decoding steps.
@@ -46,7 +42,7 @@ its runtime overhead separately.
 
 ![Achievable sparsity and kernel speedup](figures/figure_4_4_sparsity_speedup.png)
 
-## Artifact contents
+## Artifact Contents
 
 ```text
 figures/     figures used in Chapter 4 and Appendix A
@@ -56,7 +52,7 @@ kernels/     Triton block-sparse GEMM implementation
 docs/        reproduction protocol and artifact scope
 ```
 
-## Reproducing the figures
+## Reproducing the Figures
 
 This path is CPU-only and uses the committed result snapshots.
 
@@ -70,7 +66,7 @@ python scripts/plot_paper_results.py
 Generated files are written to `reproduced_figures/`. The script verifies the
 reported batch-16 and batch-64 values against the committed measurements.
 
-## Reproducing the GPU experiments
+## Reproducing the GPU Experiments
 
 The GPU experiments require Llama 2 access and TEAL calibration histograms.
 See [docs/REPRODUCING.md](docs/REPRODUCING.md) for the oracle sweep, kernel
@@ -94,7 +90,7 @@ Please use [CITATION.cff](CITATION.cff), or:
 }
 ```
 
-## License and third-party components
+## License and Third-Party Components
 
 Artifact code is released under the MIT License. The thesis PDF is available
 from the institutional repository linked above. The kernel and experiment
