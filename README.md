@@ -21,6 +21,7 @@ kernel measurements, sensitivity experiments, and practical online baselines.
 | Primary dataset | Alpaca |
 | Sparsity structure | Batch-shared blocks of 64 activation channels |
 | Quality budget | Per-step NLL of batch-size-1 TEAL at 50% sparsity |
+| Sparse kernel | Triton |
 | Kernel baseline | Dense GEMM through cuBLAS |
 
 ## Main Results
@@ -93,7 +94,9 @@ Please use [CITATION.cff](CITATION.cff), or:
 ## License and Third-Party Components
 
 Artifact code is released under the MIT License. The thesis PDF is available
-from the institutional repository linked above. The kernel and experiment
-code builds on TEAL; its MIT license is preserved in
-`third_party/TEAL_LICENSE`. Model weights and datasets are not redistributed
-and remain subject to their own licenses and access terms.
+from the institutional repository linked above. TEAL provides the calibrated
+activation-sparsity quality baseline and related utilities; the batch-shared
+oracle and Triton kernel in this artifact are separate implementations. The
+TEAL MIT license is preserved in `third_party/TEAL_LICENSE`. Model weights and
+datasets are not redistributed and remain subject to their own licenses and
+access terms.

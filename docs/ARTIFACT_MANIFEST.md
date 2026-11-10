@@ -18,9 +18,8 @@
   are supplied through environment variables.
 - Profiler captures, intermediate binaries, logs, caches, and exploratory runs
   not used in the thesis.
-- Complete copies of third-party repositories (TEAL, CATS, DejaVu, LaRoSA,
-  Polar-Sparsity, and CHESS). Only code needed for this artifact is retained,
-  with the relevant TEAL license notice.
+- Complete copies of third-party research repositories. Only code needed for
+  this artifact is retained, with the relevant TEAL license notice.
 
 ## Claim boundaries
 

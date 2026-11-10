@@ -27,6 +27,32 @@ kernel configuration search and profiling procedure before measuring Figure
 - A checkout of the TEAL repository and its Llama-2-7B activation histograms.
 - The packages in `requirements-gpu.txt`.
 
+The measurements were produced with Ubuntu 22.04, Python 3.10.14, CUDA 12.1,
+cuDNN 8.9, PyTorch 2.3.1, Triton 2.3.1, Transformers 4.43.3, Datasets 2.20.0,
+and FlashAttention 2.8.3. `Dockerfile` and `requirements-gpu-lock.txt` capture
+this environment. The unpinned `requirements-gpu.txt` remains available for
+newer compatible environments, which must be reprofiled before reporting
+kernel timings.
+
+Build and enter the pinned environment from the repository root:
+
+```bash
+docker build -t batched-activation-sparsity .
+docker run --rm -it --gpus all \
+  -v "$PWD":/artifact \
+  -v /path/to/huggingface-cache:/models \
+  -e HF_HOME=/models \
+  batched-activation-sparsity
+```
+
+Use TEAL commit `fb7373c93ac3594817c9ee64d4e08b47430a1822` for the
+calibration utilities used by the oracle experiments:
+
+```bash
+git clone https://github.com/FasterDecoding/TEAL.git
+git -C TEAL checkout fb7373c93ac3594817c9ee64d4e08b47430a1822
+```
+
 Set portable paths rather than editing the scripts:
 
 ```bash
